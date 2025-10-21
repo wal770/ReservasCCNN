@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reservaciones de Espacios - CCNN</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+    <style>
+        /* Paleta de Colores: AZUL CORPORATIVO (#004A9F) y ROJO CORPORATIVO (#D12C2C) */
+
+        /* ------------------------- ESTILOS GENERALES Y FONDO DE IMAGEN ------------------------- */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; padding: 0; 
+            color: #333; 
+            background-image: url('nuevo ingreso@4x.jpg'); /* Fondo de la imagen de tu edificio */
+            background-size: cover; 
+            background-position: center center;
+            background-attachment: fixed; 
+            background-color: #004A9F; 
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed; 
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); 
+            z-index: -1; 
+        }
+        
+        .container { 
+            width: 90%; max-width: 1200px; margin: 20px auto; 
+            background: #fff; 
+            padding: 30px; border-radius: 15px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4); 
+            min-height: 80vh; 
+            z-index: 10; 
+            position: relative;
+        }
+
+        /* ------------------------- ESTILOS DE CABECERA ------------------------- */
+        header {
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            text-align: center;
+        }
+        header img {
+            max-height: 100px;
+            display: block; 
+            margin: 0 auto 15px auto;
+            width: auto;
+        }
+        h1 { 
+            color: #D12C2C; 
+            text-align: center; margin-bottom: 0; font-size: 2.5em; font-weight: 700; 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        h2 { 
+            color: #004A9F; 
+            border-bottom: 2px solid #e0e0e0; 
+            padding-bottom: 8px; margin-top: 0; margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+
+        /* ------------------------- ESTILOS DE PESTAÑAS (TABS) ------------------------- */
+        .tabs { display: flex; margin-bottom: 0; border-bottom: 3px solid #D12C2C; } 
+        .tab {
+            padding: 12px 25px;
+            cursor: pointer;
+            border: 1px solid #D12C2C; 
+            border-bottom: none;
+            background: #ffe6e6; 
+            color: #D12C2C; 
+            margin-right: 5px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            font-weight: 600;
+            transition: background 0.3s, color 0.3s;
+            transform: translateY(2px); 
+        }
+        .tab.active {
+            background: #D12C2C; 
+            color: white;
+            border-color: #D12C2C;
+            border-bottom: 1px solid #fff; 
+            transform: translateY(0);
+        }
+        .tab-content {
+            border: 1px solid #D12C2C; 
+            padding: 30px;
+            border-radius: 0 12px 12px 12px;
+            background: #fff;
+        }
+        .tab-content.hidden { display: none; }
+
+        /* ------------------------- ESTILOS DE FORMULARIO Y CONTROLES ------------------------- */
+        #spaceSelector { margin-bottom: 20px; padding: 10px; border: 1px solid #f0f0f0; border-radius: 8px; background-color: #f7f9fc; }
+        #spaceSelector label { font-weight: bold; color: #004A9F; margin-right: 10px; }
+        #spaceSelector select { 
+            padding: 10px; border: 1px solid #004A9F; border-radius: 6px; 
+            background-color: #fff; appearance: none; 
+            min-width: 200px; color: #333;
+        }
+        #occupiedInfo { 
+            text-align: center; font-weight: 600; margin: 15px 0 25px 0; color: #D12C2C; 
+            padding: 12px; border: 2px dashed #ffbaba; background-color: #fff3f3;
+            border-radius: 8px; 
+        }
+
+        #reservationForm, #editForm {
+            border: 1px solid #e0e0e0;
+            padding: 30px;
+            border-radius: 10px;
+            background: #fcfcfc;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px 30px;
+            align-items: start;
+        }
+        #reservationForm label, #editForm label { font-weight: 600; color: #333; margin-bottom: 5px; display: block; }
+        #reservationForm input, #reservationForm select, #reservationForm textarea,
+        #editForm input, #editForm select, #editForm textarea {
+            width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; 
+            box-sizing: border-box; background-color: white;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        #reservationForm input:focus, #reservationForm select:focus, #reservationForm textarea:focus,
+        #editForm input:focus, #editForm select:focus, #editForm textarea:focus {
+            border-color: #004A9F; 
+            box-shadow: 0 0 5px rgba(0, 74, 159, 0.5);
+            outline: none;
+        }
+        .full-width { grid-column: span 3; }
+        .help-text { color: #888; font-size: 0.8em; display: block; margin-top: 5px; } /* Nuevo estilo de ayuda */
+        
+        /* Botones de acción */
+        #reservationForm button {
+            grid-column: 3 / 4; padding: 12px 30px; background: #D12C2C; color: white;
+            border: none; border-radius: 8px; cursor: pointer; justify-self: end;
+            font-weight: bold; font-size: 1.1em;
+            box-shadow: 0 4px 10px rgba(209, 44, 44, 0.4);
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        #reservationForm button:hover {
+            background: #a32222;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(209, 44, 44, 0.6);
+        }
+        
+        /* ------------------------- ESTILOS DE CALENDARIO (FullCalendar) ------------------------- */
+        #calendar {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .fc .fc-toolbar-title { color: #004A9F; font-weight: 700; }
+        .fc .fc-button-primary { background-color: #D12C2C; border: none; } 
+        .fc .fc-button-primary:hover { background-color: #a32222; }
+        .fc-col-header-cell { background-color: #ffe6e6; font-weight: 600; color: #D12C2C; } 
+        .fc-event { background-color: #004A9F; border-color: #00377a; font-weight: 600; } 
+        /* Estilos específicos para el formato 12h */
+        .fc-timegrid-slot-label-cushion {
+            padding: 0 5px;
+        }
+
+
+        /* ------------------------- ESTILOS DE MODAL (EDITAR/ELIMINAR) ------------------------- */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.6); 
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; 
+            padding: 30px;
+            border: 1px solid #888;
+            width: 90%; 
+            max-width: 1000px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .close-btn {
+            color: #D12C2C;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #a32222;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-buttons {
+            grid-column: span 3;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .modal-buttons button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.3s;
+        }
+        #updateReservationBtn {
+            background-color: #004A9F;
+            color: white;
+        }
+        #deleteReservationBtn {
+            background-color: #D12C2C;
+            color: white;
+        }
+        #updateReservationBtn:hover { opacity: 0.9; background-color: #00377a; }
+        #deleteReservationBtn:hover { opacity: 0.9; background-color: #a32222; }
+
+        /* ------------------------- ESTILOS DE REPORTE ------------------------- */
+        .report-controls { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr) auto; 
+            gap: 15px; 
+            margin-bottom: 25px; 
+            align-items: end; 
+            background: #e6f0ff; 
+            padding: 18px;
+            border-radius: 10px;
+            border: 1px solid #d0e0f0;
+        }
+        .report-controls label { font-weight: 600; color: #004A9F; }
+        #exportBtn { 
+            padding: 12px 15px; 
+            background-color: #D12C2C; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            white-space: nowrap; 
+            box-shadow: 0 2px 5px rgba(209, 44, 44, 0.4);
+        }
+        #exportBtn:hover { background-color: #a32222; }
+
+        #reservationsTable th { background-color: #004A9F; color: white; padding: 15px; font-weight: 700; } 
+        #reservationsTable td { border: 1px solid #f0f0f0; padding: 12px; }
+        #reservationsTable tbody tr:nth-child(even) { background-color: #f9f9f9; } 
+        #reservationsTable tbody tr:hover { background-color: #e6f0ff; cursor: pointer; } 
+
+        /* ------------------------- PIE DE PÁGINA (FOOTER) ------------------------- */
+        footer {
+            background-color: #004A9F; 
+            color: white; 
+            text-align: center; 
+            padding: 18px 0; 
+            margin-top: 40px; 
+            font-size: 1em;
+            font-weight: 600;
+            width: 100%;
+            border-top: 5px solid #D12C2C; 
+            z-index: 20; 
+            position: relative; 
+        }
+        .date-error { color: #D12C2C; font-size: 0.9em; font-weight: bold; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <header>
+            <img src="LogoCCNN.png" alt="Logo de la Empresa"> 
+
+<h1>Reservaciones de Espacios</h1>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="tabCalendar">📅 Calendario / Reserva</div>
+            <div class="tab" data-tab="tabReport">📋 Listado / Reporte</div>
+        </div>
+
+        <div id="tabCalendar" class="tab-content">
+            <div id="reservationSection">
+                <h2>Nueva Reserva</h2>
+
+                <div id="spaceSelector">
+                    <label for="space">Seleccione un espacio:</label>
+                    <select id="space">
+                        <option value="Blueroom">Blueroom</option>
+                        <option value="Teatro">Teatro</option>
+                        <option value="Galería 1">Galería 1</option>
+                        <option value="Galería 2">Galería 2</option>
+                    </select>
+                </div>
+
+                <div id="calendar" style="margin: 20px 0;"></div>
+
+                <div id="occupiedInfo">
+                    Haga clic en el calendario para crear una nueva reserva o en un evento existente para **editarlo/cancelarlo**.
+                </div>
+
+                <form id="reservationForm">
+                    <div>
+                        <label for="activityName">Nombre de la Actividad:</label>
+                        <input type="text" id="activityName" required>
+                    </div>
+                    <div>
+                        <label for="reservationType">Tipo de Reserva:</label>
+                        <select id="reservationType">
+                            <option value="Interna">Interna</option>
+                            <option value="Externa">Externa</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="responsible">Responsable de la Actividad:</label>
+                        <input type="text" id="responsible">
+                    </div>
+
+                    <div>
+                        <label for="date">Fecha (dd/mm/aaaa):</label>
+                        <input type="date" id="date" required>
+                        <span id="dateError" class="date-error"></span>
+                    </div>
+                    <div>
+                        <label for="startTime">Hora Inicio:</label>
+                        <input type="time" id="startTime" required>
+                        <small class="help-text">Ej. 10:00 (10 a.m.), 18:00 (6 p.m.)</small>
+                    </div>
+                    <div>
+                        <label for="endTime">Hora Fin:</label>
+                        <input type="time" id="endTime" required>
+                        <small class="help-text">Ej. 10:00 (10 a.m.), 18:00 (6 p.m.)</small>
+                    </div>
+                    
+                    <div>
+                        <label for="furniture">Q Mobiliario requerido:</label>
+                        <textarea id="furniture" rows="2"></textarea>
+                    </div>
+                    <div>
+                        <label for="av">Medios Audiovisuales:</label>
+                        <textarea id="av" rows="2"></textarea>
+                    </div>
+                    <div>
+                        <label for="sound">Sonido:</label>
+                        <textarea id="sound" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="full-width">
+                        <label for="cleaning">Limpieza y Arreglo:</label>
+                        <textarea id="cleaning" rows="2"></textarea>
+                    </div>
+
+                    <div class="full-width">
+                        <label for="protocol">Protocolo de atención:</label>
+                        <textarea id="protocol" rows="2"></textarea>
+                    </div>
+
+                    <div class="full-width">
+                        <label for="observations">Observaciones:</label>
+                        <textarea id="observations" rows="3"></textarea>
+                    </div>
+
+                    <button type="submit">Reservar Espacio</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="tabReport" class="tab-content hidden">
+            <div id="listadoReservasContainer">
+                <h2>Listado de Reservas</h2>
+                
+                <div class="report-controls">
+                    <div>
+                        <label for="spaceFilter">Espacio:</label>
+                        <select id="spaceFilter">
+                            <option value="All">Todos los Espacios</option>
+                            <option value="Blueroom">Blueroom</option>
+                            <option value="Teatro">Teatro</option>
+                            <option value="Galería 1">Galería 1</option>
+                            <option value="Galería 2">Galería 2</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="startDateFilter">Fecha Inicio:</label>
+                        <input type="date" id="startDateFilter">
+                    </div>
+                    <div>
+                        <label for="endDateFilter">Fecha Fin:</label>
+                        <input type="date" id="endDateFilter">
+                    </div>
+                    <div>
+                        <label for="searchInput">Buscar:</label>
+                        <input type="text" id="searchInput" placeholder="Actividad o Responsable">
+                    </div>
+                    
+                    <button id="exportBtn">Exportar a Excel (CSV)</button>
+                </div>
+                
+                <table id="reservationsTable" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Espacio</th>
+                            <th>Actividad</th>
+                            <th>Responsable</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <h2>Editar o Cancelar Reserva (<span id="editReservationId"></span>)</h2>
+
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    
+                    <div>
+                        <label for="editSpace">Espacio:</label>
+                        <select id="editSpace" disabled> 
+                            <option value="Blueroom">Blueroom</option>
+                            <option value="Teatro">Teatro</option>
+                            <option value="Galería 1">Galería 1</option>
+                            <option value="Galería 2">Galería 2</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="editActivityName">Nombre de la Actividad:</label>
+                        <input type="text" id="editActivityName" required>
+                    </div>
+                    <div>
+                        <label for="editReservationType">Tipo de Reserva:</label>
+                        <select id="editReservationType">
+                            <option value="Interna">Interna</option>
+                            <option value="Externa">Externa</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="editResponsible">Responsable de la Actividad:</label>
+                        <input type="text" id="editResponsible">
+                    </div>
+                    <div>
+                        <label for="editDate">Fecha:</label>
+                        <input type="date" id="editDate" required>
+                    </div>
+                    <div>
+                        <label for="editStartTime">Hora Inicio:</label>
+                        <input type="time" id="editStartTime" required>
+                        <small class="help-text">Ej. 10:00 (10 a.m.), 18:00 (6 p.m.)</small>
+                    </div>
+                    
+                    <div>
+                        <label for="editEndTime">Hora Fin:</label>
+                        <input type="time" id="editEndTime" required>
+                        <small class="help-text">Ej. 10:00 (10 a.m.), 18:00 (6 p.m.)</small>
+                    </div>
+                    <div>
+                        <label for="editFurniture">Q Mobiliario requerido:</label>
+                        <textarea id="editFurniture" rows="2"></textarea>
+                    </div>
+                    <div>
+                        <label for="editAv">Medios Audiovisuales:</label>
+                        <textarea id="editAv" rows="2"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label for="editSound">Sonido:</label>
+                        <textarea id="editSound" rows="2"></textarea>
+                    </div>
+                    <div class="full-width">
+                        <label for="editCleaning">Limpieza y Arreglo:</label>
+                        <textarea id="editCleaning" rows="2"></textarea>
+                    </div>
+                    <div class="full-width">
+                        <label for="editProtocol">Protocolo de atención:</label>
+                        <textarea id="editProtocol" rows="2"></textarea>
+                    </div>
+
+                    <div class="full-width">
+                        <label for="editObservations">Observaciones:</label>
+                        <textarea id="editObservations" rows="3"></textarea>
+                    </div>
+
+                    <div class="modal-buttons">
+                        <button type="button" id="deleteReservationBtn">❌ Cancelar Reserva</button>
+                        <button type="submit" id="updateReservationBtn">💾 Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+
+        <footer>
+            CCNN 2025
+        </footer>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/locales/es.global.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // 1. CONFIGURACIÓN DE FECHA MÍNIMA (HOY)
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const minDate = `${yyyy}-${mm}-${dd}`;
+            
+            // 2. DATOS DE PRUEBA Y ELEMENTOS
+            let reservations = JSON.parse(localStorage.getItem('reservations')) || [
+                { id: 1, space: 'Blueroom', title: 'Reunión Liderazgo', type: 'Interna', responsible: 'Javier', start: '2025-11-03T10:00:00', end: '2025-11-03T12:00:00', cleaning: '', furniture: '', av: '', sound: '', protocol: '', observations: 'Revisión trimestral.' },
+                { id: 2, space: 'Teatro', title: 'Ensayo General', type: 'Externa', responsible: 'Marta', start: '2025-11-04T18:00:00', end: '2025-11-04T21:00:00', cleaning: '', furniture: '20 sillas', av: 'Proyector', sound: 'Micrófono principal', protocol: '', observations: 'Evento abierto al público.' }
+            ];
+
+            // Elementos del formulario y calendario (Creación)
+            const spaceSelect = document.getElementById('space');
+            const currentSpaceSpan = document.getElementById('currentSpace');
+            const form = document.getElementById('reservationForm');
+            const dateInput = document.getElementById('date');
+            const dateErrorSpan = document.getElementById('dateError');
+            
+            // Elementos del reporte
+            const reservationsTableBody = document.querySelector('#reservationsTable tbody');
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const spaceFilter = document.getElementById('spaceFilter');
+            const searchInput = document.getElementById('searchInput');
+            const startDateFilter = document.getElementById('startDateFilter');
+            const endDateFilter = document.getElementById('endDateFilter');
+
+            // Elementos del Modal (Edición/Eliminación)
+            const editModal = document.getElementById('editModal');
+            const closeBtn = document.querySelector('.close-btn');
+            const editForm = document.getElementById('editForm');
+            const editIdInput = document.getElementById('editId');
+            const deleteBtn = document.getElementById('deleteReservationBtn');
+            const editDateInput = document.getElementById('editDate');
+
+            // --- Funciones Auxiliares ---
+
+            function saveReservations() {
+                localStorage.setItem('reservations', JSON.stringify(reservations));
+            }
+            
+            function isOverlapping(proposedStart, proposedEnd, currentSpace, excludeId = null) {
+                return reservations.some(r => {
+                    if (r.space !== currentSpace) return false;
+                    if (excludeId !== null && r.id === excludeId) return false;
+                    
+                    const existingStart = new Date(r.start).getTime();
+                    const existingEnd = new Date(r.end).getTime();
+                    
+                    return (proposedStart < existingEnd && proposedEnd > existingStart);
+                });
+            }
+
+            function refreshCalendar() {
+                if (calendar) calendar.refetchEvents();
+            }
+
+            // --- Lógica del Calendario (ACTUALIZACIÓN PARA FORZAR 12 HORAS) ---
+            const calendarEl = document.getElementById('calendar');
+            let calendar;
+
+            if (calendarEl && spaceSelect) {
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'timeGridWeek',
+                    locale: 'es',
+                    
+                    // 👇 CONFIGURACIÓN CLAVE PARA FORMATO DE 12 HORAS Y QUITAR 24 HORAS 👇
+                    slotDuration: '00:30:00', 
+                    
+                    // ¡AQUÍ ESTÁ EL CAMBIO CLAVE!
+                    slotLabelFormat: {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        meridiem: 'short', // Muestra a. m./p. m.
+                        hour12: true // <-- FORZAMOS EL FORMATO 12 HORAS
+                    },
+                    
+                    eventTimeFormat: { 
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        meridiem: 'short',
+                        hour12: true // <-- FORZAMOS EL FORMATO 12 HORAS EN EVENTOS
+                    },
+                    // 👆 FIN DE CONFIGURACIÓN 12 HORAS 👆
+                    
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'timeGridWeek,timeGridDay'
+                    },
+                    selectable: true,
+                    nowIndicator: true, 
+                    select: function(info) {
+                        const selectedStart = new Date(info.startStr).getTime();
+                        if (selectedStart < new Date().getTime()) {
+                            alert('ERROR: No se puede reservar en un momento que ya pasó.');
+                            calendar.unselect();
+                            return;
+                        }
+                        // Rellenar formulario de creación con la selección
+                        dateInput.value = info.startStr.split('T')[0];
+                        document.getElementById('startTime').value = info.startStr.substring(11,16);
+                        document.getElementById('endTime').value = info.endStr.substring(11,16);
+                    },
+                    eventClick: function(info) {
+                        // Lógica para abrir el modal de edición
+                        const reservationId = parseInt(info.event.id);
+                        const reservation = reservations.find(r => r.id === reservationId);
+                        
+                        if (reservation) {
+                            openEditModal(reservation);
+                        }
+                    },
+                    events: function(fetchInfo, successCallback) {
+                        const currentSpace = spaceSelect.value;
+                        if (currentSpaceSpan) currentSpaceSpan.textContent = currentSpace;
+                        
+                        const evts = reservations
+                            .filter(r => r.space === currentSpace)
+                            .map(r => ({
+                                id: r.id,
+                                title: r.title,
+                                start: r.start,
+                                end: r.end
+                            }));
+                        successCallback(evts);
+                    }
+                });
+                calendar.render();
+                spaceSelect.addEventListener('change', refreshCalendar);
+            }
+
+            // --- Lógica de Pestañas y Formulario de Creación ---
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetId = tab.getAttribute('data-tab');
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(tc => tc.classList.add('hidden'));
+                    tab.classList.add('active');
+                    document.getElementById(targetId).classList.remove('hidden');
+
+                    if (targetId === 'tabReport') {
+                        refreshTable(); 
+                    }
+                });
+            });
+
+            if (dateInput) {
+                dateInput.addEventListener('change', function() {
+                    const selectedDate = new Date(this.value);
+                    const todayOnly = new Date(minDate);
+                    
+                    if (selectedDate < todayOnly) {
+                        dateErrorSpan.textContent = 'No se puede reservar en una fecha pasada.';
+                        this.setCustomValidity('La fecha no puede ser anterior a hoy.'); 
+                    } else {
+                        dateErrorSpan.textContent = '';
+                        this.setCustomValidity(''); 
+                    }
+                });
+            }
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const date = dateInput.value;
+                    const startTime = document.getElementById('startTime').value;
+                    const endTime = document.getElementById('endTime').value;
+                    const currentSpace = spaceSelect.value;
+                    
+                    const startDateTime = date + 'T' + startTime + ':00';
+                    const endDateTime = date + 'T' + endTime + ':00';
+
+                    const proposedStart = new Date(startDateTime).getTime();
+                    const proposedEnd = new Date(endDateTime).getTime();
+                    
+                    if (proposedStart >= proposedEnd) { alert('ERROR: La hora de inicio debe ser anterior a la hora de fin.'); return; }
+                    if (proposedStart < new Date().getTime()) { alert('ERROR: No se puede reservar en un horario que ya pasó o está por pasar.'); return; }
+
+                    if (isOverlapping(proposedStart, proposedEnd, currentSpace)) {
+                        alert('El horario seleccionado ya está ocupado para ese espacio. Por favor, seleccione otro.'); 
+                        return; 
+                    }
+
+                    const newId = reservations.length > 0 ? reservations[reservations.length - 1].id + 1 : 1;
+                    const newRes = {
+                        id: newId, space: currentSpace, title: document.getElementById('activityName').value, 
+                        type: document.getElementById('reservationType').value, responsible: document.getElementById('responsible').value, 
+                        start: startDateTime, end: endDateTime, 
+                        cleaning: document.getElementById('cleaning').value, 
+                        furniture: document.getElementById('furniture').value, 
+                        av: document.getElementById('av').value, 
+                        sound: document.getElementById('sound').value, 
+                        protocol: document.getElementById('protocol').value, 
+                        observations: document.getElementById('observations').value,
+                    };
+                    reservations.push(newRes);
+                    saveReservations(); 
+
+                    refreshCalendar();
+                    alert('Reserva creada correctamente!');
+                    form.reset();
+                    dateInput.min = minDate;
+                });
+            }
+
+            // --- Lógica del Modal de Edición ---
+
+            function openEditModal(reservation) {
+                // Rellenar Modal
+                document.getElementById('editReservationId').textContent = reservation.id;
+                editIdInput.value = reservation.id;
+                
+                document.getElementById('editSpace').value = reservation.space;
+                document.getElementById('editActivityName').value = reservation.title;
+                document.getElementById('editReservationType').value = reservation.type;
+                document.getElementById('editResponsible').value = reservation.responsible;
+                
+                // Formato de fechas y horas
+                editDateInput.value = reservation.start.substring(0, 10);
+                document.getElementById('editStartTime').value = reservation.start.substring(11, 16);
+                document.getElementById('editEndTime').value = reservation.end.substring(11, 16);
+                
+                // Detalles
+                document.getElementById('editFurniture').value = reservation.furniture;
+                document.getElementById('editAv').value = reservation.av;
+                document.getElementById('editSound').value = reservation.sound;
+                document.getElementById('editCleaning').value = reservation.cleaning;
+                document.getElementById('editProtocol').value = reservation.protocol;
+                document.getElementById('editObservations').value = reservation.observations;
+
+                // Mostrar Modal
+                editModal.style.display = 'block';
+                editDateInput.min = minDate;
+            }
+
+            // Cerrar Modal
+            closeBtn.onclick = function() {
+                editModal.style.display = 'none';
+            }
+            window.onclick = function(event) {
+                if (event.target == editModal) {
+                    editModal.style.display = 'none';
+                }
+            }
+
+            // Manejar Guardar Cambios (Edición)
+            editForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const id = parseInt(editIdInput.value);
+                const space = document.getElementById('editSpace').value;
+                const date = editDateInput.value;
+                const startTime = document.getElementById('editStartTime').value;
+                const endTime = document.getElementById('editEndTime').value;
+
+                const startDateTime = date + 'T' + startTime + ':00';
+                const endDateTime = date + 'T' + endTime + ':00';
+
+                const proposedStart = new Date(startDateTime).getTime();
+                const proposedEnd = new Date(endDateTime).getTime();
+                
+                if (proposedStart >= proposedEnd) { alert('ERROR: La hora de inicio debe ser anterior a la hora de fin.'); return; }
+                if (proposedStart < new Date().getTime()) { alert('ERROR: No se puede editar a un horario que ya pasó o está por pasar.'); return; }
+
+                // Verificar solapamiento, excluyendo la reserva actual
+                if (isOverlapping(proposedStart, proposedEnd, space, id)) {
+                    alert('El horario editado ya está ocupado para ese espacio. Por favor, seleccione otro.'); 
+                    return; 
+                }
+
+                // Actualizar la reserva en el array
+                const index = reservations.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    reservations[index] = {
+                        id: id,
+                        space: space,
+                        title: document.getElementById('editActivityName').value,
+                        type: document.getElementById('editReservationType').value,
+                        responsible: document.getElementById('editResponsible').value,
+                        start: startDateTime,
+                        end: endDateTime,
+                        furniture: document.getElementById('editFurniture').value,
+                        av: document.getElementById('editAv').value,
+                        sound: document.getElementById('editSound').value,
+                        cleaning: document.getElementById('editCleaning').value,
+                        protocol: document.getElementById('editProtocol').value,
+                        observations: document.getElementById('editObservations').value,
+                    };
+                    saveReservations();
+                    refreshCalendar();
+                    refreshTable();
+                    editModal.style.display = 'none';
+                    alert('Reserva actualizada correctamente!');
+                }
+            });
+
+            // Manejar Cancelar Reserva (Eliminación)
+            deleteBtn.addEventListener('click', function() {
+                const id = parseInt(editIdInput.value);
+                if (confirm('¿Está seguro que desea CANCELAR esta reserva (ID: ' + id + ')? Esta acción es irreversible.')) {
+                    reservations = reservations.filter(r => r.id !== id);
+                    saveReservations();
+                    refreshCalendar();
+                    refreshTable();
+                    editModal.style.display = 'none';
+                    alert('Reserva cancelada correctamente.');
+                }
+            });
+
+
+            // --- Lógica del Listado y Reporte ---
+            
+            function refreshTable() {
+                const selectedSpace = spaceFilter.value;
+                const searchTerm = searchInput.value.toLowerCase();
+                const startFilterDate = startDateFilter.value ? new Date(startDateFilter.value + 'T00:00:00').getTime() : null;
+                const endFilterDate = endDateFilter.value ? new Date(endDateFilter.value + 'T23:59:59').getTime() : null;
+                
+                let filteredList = reservations;
+
+                if (selectedSpace !== 'All') {
+                    filteredList = filteredList.filter(r => r.space === selectedSpace);
+                }
+
+                if (startFilterDate || endFilterDate) {
+                    filteredList = filteredList.filter(r => {
+                        const reservationStart = new Date(r.start).getTime();
+
+                        let passesStart = true;
+                        if (startFilterDate && reservationStart < startFilterDate) {
+                            passesStart = false;
+                        }
+
+                        let passesEnd = true;
+                        if (endFilterDate && reservationStart > endFilterDate) {
+                            passesEnd = false;
+                        }
+                        
+                        return passesStart && passesEnd;
+                    });
+                }
+
+                if (searchTerm) {
+                    filteredList = filteredList.filter(r => 
+                        r.title.toLowerCase().includes(searchTerm) || 
+                        r.responsible.toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                if (reservationsTableBody) {
+                    reservationsTableBody.innerHTML = '';
+                    filteredList.forEach(r => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${r.id}</td>
+                            <td>${r.space}</td>
+                            <td>${r.title}</td>
+                            <td>${r.responsible}</td>
+                            <td>${r.start.substring(0, 16).replace('T', ' ')}</td>
+                            <td>${r.end.substring(0, 16).replace('T', ' ')}</td>
+                        `;
+                        // Agregar evento para abrir modal al hacer clic en la fila
+                        tr.addEventListener('click', () => openEditModal(r));
+                        reservationsTableBody.appendChild(tr);
+                    });
+                }
+            }
+            
+            // Eventos para filtros
+            if (spaceFilter) spaceFilter.addEventListener('change', refreshTable);
+            if (searchInput) searchInput.addEventListener('keyup', refreshTable);
+            if (startDateFilter) startDateFilter.addEventListener('change', refreshTable);
+            if (endDateFilter) endDateFilter.addEventListener('change', refreshTable);
+
+            // Lógica de Exportar a CSV 
+            const exportBtn = document.getElementById('exportBtn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', function() {
+                    const listToExport = Array.from(reservationsTableBody.querySelectorAll('tr')).map(row => {
+                        return reservations.find(r => r.id === parseInt(row.querySelector('td:first-child').textContent));
+                    });
+
+                    const escapeCSV = (str) => {
+                        if (str === null || str === undefined || str === '') return '""';
+                        str = String(str).replace(/"/g, '""');
+                        return `"${str}"`;
+                    };
+                    
+                    let csv = escapeCSV('ID') + ',' + 
+                              escapeCSV('Espacio') + ',' + 
+                              escapeCSV('Actividad') + ',' + 
+                              escapeCSV('Tipo') + ',' + 
+                              escapeCSV('Responsable') + ',' + 
+                              escapeCSV('FechaInicio') + ',' + 
+                              escapeCSV('FechaFin') + ',' + 
+                              escapeCSV('Limpieza') + ',' + 
+                              escapeCSV('Mobiliario') + ',' + 
+                              escapeCSV('Audiovisuales') + ',' + 
+                              escapeCSV('Sonido') + ',' + 
+                              escapeCSV('Protocolo') + ',' + 
+                              escapeCSV('Observaciones') + '\n';
+                    
+                    listToExport.forEach(r => {
+                        const row = [
+                            r.id, 
+                            escapeCSV(r.space), 
+                            escapeCSV(r.title), 
+                            escapeCSV(r.type), 
+                            escapeCSV(r.responsible), 
+                            escapeCSV(r.start.substring(0, 16).replace('T', ' ')),
+                            escapeCSV(r.end.substring(0, 16).replace('T', ' ')),
+                            escapeCSV(r.cleaning),
+                            escapeCSV(r.furniture),
+                            escapeCSV(r.av),
+                            escapeCSV(r.sound),
+                            escapeCSV(r.protocol),
+                            escapeCSV(r.observations)
+                        ].join(',');
+                        csv += row + '\n';
+                    });
+                    
+                    const BOM = '\uFEFF'; 
+                    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'reservas_exportadas.csv';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
